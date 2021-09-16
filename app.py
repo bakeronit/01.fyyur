@@ -139,7 +139,7 @@ def search_venues():
 
 @app.route('/venues/<int:venue_id>')
 def show_venue(venue_id):
-  if data := Venue.query.get(venue_id):
+  if (data := Venue.query.get(venue_id)) is not None:
     data.past_shows = [{"artist_id":show.artist_id,"artist_name":Artist.query.get(show.artist_id).name,\
       "artist_image_link":Artist.query.get(show.artist_id).image_link,"start_time":show.start_time.strftime("%Y-%m-%dT%H:%M:%S.%f%z")} \
       for show in data.shows if show.start_time < today ]
@@ -336,7 +336,7 @@ def search_artists():
 def show_artist(artist_id):
   # shows the artist page with the given artist_id
 
-  if data := Artist.query.get(artist_id):
+  if (data := Artist.query.get(artist_id)) is not None:
     data.past_shows = [{"venue_id":show.venue_id,"venue_name":Venue.query.get(show.venue_id).name,\
       "venue_image_link":Venue.query.get(show.venue_id).image_link,"start_time":show.start_time.strftime("%Y-%m-%dT%H:%M:%S.%f%z")} \
       for show in data.shows if show.start_time < today]
