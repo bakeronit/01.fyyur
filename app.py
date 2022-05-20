@@ -107,7 +107,8 @@ def search_venues():
 @app.route('/venues/<int:venue_id>')
 def show_venue(venue_id):
 
-  if (data := Venue.query.get(venue_id)) is not None:
+  if Venue.query.get(venue_id) is not None:
+    data = Venue.query.get(venue_id)
     upcoming_shows = db.session.query(Artist.id, Artist.name, Artist.image_link, Show.start_time).join(Show).filter(Show.venue_id==venue_id, Show.start_time > today).all()
     data.upcoming_shows = [dict(itertools.zip_longest(["artist_id","artist_name","artist_image_link","start_time"],show)) for show in upcoming_shows]
     data.upcoming_shows_count = len(data.upcoming_shows)
@@ -195,7 +196,8 @@ def search_artists():
 def show_artist(artist_id):
   # shows the artist page with the given artist_id
 
-  if (data := Artist.query.get(artist_id)) is not None:
+  if Artist.query.get(artist_id) is not None:
+    data = Artist.query.get(artist_id)
     upcoming_shows = db.session.query(Venue.id, Venue.name, Venue.image_link, Show.start_time).join(Show).filter(Show.artist_id==artist_id, Show.start_time > today).all()
     data.upcoming_shows = [dict(itertools.zip_longest(["venue_id","venue_name","venue_image_link","start_time"],show)) for show in upcoming_shows]
     data.upcoming_shows_count = len(data.upcoming_shows)
