@@ -25,6 +25,7 @@ from sqlalchemy import desc
 from flask_sqlalchemy import SQLAlchemy
 from flask_moment import Moment
 from flask_migrate import Migrate, migrate
+import itertools
 
 # connect to a local postgresql database `createdb fyyur`
 
@@ -51,7 +52,11 @@ from models import *
 #----------------------------------------------------------------------------#
 
 def format_datetime(value, format='medium'):
-  date = dateutil.parser.parse(value)
+  if isinstance(value, str):
+    date = dateutil.parser.parse(value)
+  else:
+    date = value ## fix format filter in html
+  
   if format == 'full':
       format="EEEE MMMM, d, y 'at' h:mma"
   elif format == 'medium':
@@ -94,24 +99,38 @@ def search_venues():
   count = len(data)
   
   response = {"count" : count,
-            "data": data
+            "data" : data
             }
   
   return render_template('pages/search_venues.html', results=response, search_term=request.form.get('search_term', ''))
 
 @app.route('/venues/<int:venue_id>')
 def show_venue(venue_id):
+
   if (data := Venue.query.get(venue_id)) is not None:
-    data.past_shows = [{"artist_id":show.artist_id,"artist_name":Artist.query.get(show.artist_id).name,\
-      "artist_image_link":Artist.query.get(show.artist_id).image_link,"start_time":show.start_time.strftime("%Y-%m-%dT%H:%M:%S.%f%z")} \
-      for show in data.shows if show.start_time < today ]
-    data.past_shows_count = len(data.past_shows)
-    data.upcoming_shows = [{"artist_id":show.artist_id,"artist_name":Artist.query.get(show.artist_id).name,\
-      "artist_image_link":Artist.query.get(show.artist_id).image_link,"start_time":show.start_time.strftime("%Y-%m-%dT%H:%M:%S.%f%z")} \
-      for show in data.shows if show.start_time > today ]
+    upcoming_shows = db.session.query(Artist.id, Artist.name, Artist.image_link, Show.start_time).join(Show).filter(Show.venue_id==venue_id, Show.start_time > today).all()
+    data.upcoming_shows = [dict(itertools.zip_longest(["artist_id","artist_name","artist_image_link","start_time"],show)) for show in upcoming_shows]
     data.upcoming_shows_count = len(data.upcoming_shows)
+    past_shows = db.session.query(Artist.id, Artist.name, Artist.image_link, Show.start_time).join(Show).filter(Show.venue_id==venue_id, Show.start_time <= today).all()
+    data.past_shows = [dict(itertools.zip_longest(["artist_id","artist_name","artist_image_link","start_time"],show)) for show in past_shows]
+    data.past_shows_count = len(data.past_shows)
   else:
     return render_template('errors/404.html'), 404
+
+
+
+
+  #if (data := Venue.query.get(venue_id)) is not None:
+  #  data.past_shows = [{"artist_id" : show.artist_id, "artist_name" : Artist.query.get(show.artist_id).name,\
+  #    "artist_image_link" : Artist.query.get(show.artist_id).image_link, "start_time" : show.start_time.strftime("%Y-%m-%dT%H:%M:%S.%f%z")} \
+  #    for show in data.shows if show.start_time < today ]
+  #  data.past_shows_count = len(data.past_shows)
+  #  data.upcoming_shows = [{"artist_id":show.artist_id,"artist_name":Artist.query.get(show.artist_id).name,\
+  #    "artist_image_link":Artist.query.get(show.artist_id).image_link,"start_time":show.start_time.strftime("%Y-%m-%dT%H:%M:%S.%f%z")} \
+  #    for show in data.shows if show.start_time > today ]
+  #  data.upcoming_shows_count = len(data.upcoming_shows)
+  #else:
+  #  return render_template('errors/404.html'), 404
 
   return render_template('pages/show_venue.html', venue=data)
 
