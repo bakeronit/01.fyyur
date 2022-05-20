@@ -117,21 +117,6 @@ def show_venue(venue_id):
   else:
     return render_template('errors/404.html'), 404
 
-
-
-
-  #if (data := Venue.query.get(venue_id)) is not None:
-  #  data.past_shows = [{"artist_id" : show.artist_id, "artist_name" : Artist.query.get(show.artist_id).name,\
-  #    "artist_image_link" : Artist.query.get(show.artist_id).image_link, "start_time" : show.start_time.strftime("%Y-%m-%dT%H:%M:%S.%f%z")} \
-  #    for show in data.shows if show.start_time < today ]
-  #  data.past_shows_count = len(data.past_shows)
-  #  data.upcoming_shows = [{"artist_id":show.artist_id,"artist_name":Artist.query.get(show.artist_id).name,\
-  #    "artist_image_link":Artist.query.get(show.artist_id).image_link,"start_time":show.start_time.strftime("%Y-%m-%dT%H:%M:%S.%f%z")} \
-  #    for show in data.shows if show.start_time > today ]
-  #  data.upcoming_shows_count = len(data.upcoming_shows)
-  #else:
-  #  return render_template('errors/404.html'), 404
-
   return render_template('pages/show_venue.html', venue=data)
 
 #  Create Venue
@@ -211,24 +196,12 @@ def show_artist(artist_id):
   # shows the artist page with the given artist_id
 
   if (data := Artist.query.get(artist_id)) is not None:
-    data.past_shows = [{
-      "venue_id" : show.venue_id,
-      "venue_name" : Venue.query.get(show.venue_id).name,
-      "venue_image_link" : Venue.query.get(show.venue_id).image_link,"start_time":show.start_time.strftime("%Y-%m-%dT%H:%M:%S.%f%z")
-      } for show in data.shows if show.start_time < today
-    ]
-    
-    data.past_shows_count = len(data.past_shows)
-    
-    data.upcoming_shows = [{
-      "venue_id" : show.venue_id,
-      "venue_name" : Venue.query.get(show.venue_id).name,
-      "venue_image_link" : Venue.query.get(show.venue_id).image_link,"start_time":show.start_time.strftime("%Y-%m-%dT%H:%M:%S.%f%z")
-      } for show in data.shows if show.start_time > today 
-    ]
-    
+    upcoming_shows = db.session.query(Venue.id, Venue.name, Venue.image_link, Show.start_time).join(Show).filter(Show.artist_id==artist_id, Show.start_time > today).all()
+    data.upcoming_shows = [dict(itertools.zip_longest(["venue_id","venue_name","venue_image_link","start_time"],show)) for show in upcoming_shows]
     data.upcoming_shows_count = len(data.upcoming_shows)
-  
+    past_shows = db.session.query(Venue.id, Venue.name, Venue.image_link, Show.start_time).join(Show).filter(Show.artist_id==artist_id, Show.start_time <= today).all()
+    data.past_shows = [dict(itertools.zip_longest(["venue_id","venue_name","venue_image_link","start_time"],show)) for show in past_shows]
+    data.past_shows_count = len(data.past_shows)
   else:
     return render_template('errors/404.html'), 404
  
@@ -340,15 +313,8 @@ def create_artist_submission():
 def shows():
   # displays list of shows at /shows
 
-  shows = Show.query.all()
-  data = [{
-    "venue_id" : s.venue_id, 
-    "venue_name" : Venue.query.get(s.venue_id).name,
-    "artist_id" : s.artist_id,"artist_name":Artist.query.get(s.artist_id).name,
-    "artist_image_link" : Artist.query.get(s.artist_id).image_link,
-    "start_time" : s.start_time.strftime("%Y-%m-%dT%H:%M:%S.%f%z")
-    } for s in shows
-  ]
+  shows = db.session.query(Show.venue_id,Venue.name,Show.artist_id,  Artist.name, Artist.image_link, Show.start_time ).join(Artist).join(Venue).all()
+  data = [dict(itertools.zip_longest(["venue_id","venue_name","artist_id","artist_name","artist_image_link","start_time"],show)) for show in shows]
 
   return render_template('pages/shows.html', shows=data)
 
