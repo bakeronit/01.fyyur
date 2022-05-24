@@ -2,6 +2,7 @@
 # Imports
 #----------------------------------------------------------------------------#
 
+from email import message
 import json
 import dateutil.parser
 import babel
@@ -132,22 +133,18 @@ def create_venue_form():
 def create_venue_submission():
 
   form = VenueForm(request.form)
-  
-  try:
+  if form.validate_on_submit():
     venue = Venue()
     form.populate_obj(venue)
     db.session.add(venue)
     db.session.commit()
     flash(f"Venue {request.form['name']} was successfully listed!")
-  except ValueError as e:
-    print(e)
-    flash(f"An error occurred. Venue {request.form['name']} could not be listed.")
+    return redirect(url_for('venues'))
+  else:
+    for field, message in form.errors.items():
+      flash(field + '-' + str(message))
     db.session.rollback()
-  finally:
-    db.session.close()
- 
-  return redirect(url_for('venues'))
-  
+    return render_template('forms/new_venue.html', form=form)
 
 @app.route('/venues/<venue_id>', methods=['DELETE'])
 def delete_venue(venue_id):
@@ -221,29 +218,19 @@ def edit_artist(artist_id):
 @app.route('/artists/<int:artist_id>/edit', methods=['POST'])
 def edit_artist_submission(artist_id):
 
+  form = ArtistForm()
   artist = Artist.query.get(artist_id)
-
-  for var in request.form:
-    if var == 'genres':
-      setattr(artist, var, request.form.getlist(var))
-    elif var == 'seeking_venue':
-      setattr(artist, var, True if request.form.get(var) == 'y' else False)
-    else:
-      setattr(artist, var, request.form.get(var))
-    
-  try:
+  if form.validate_on_submit():
+     
+    form.populate_obj(artist)
     db.session.commit()
     flash(f"Artist {request.form['name']} was successfully updated!")
-
-  except:
+    return redirect(url_for('show_artist', artist_id=artist_id))
+  else:
+    for field, message in form.errors.items():
+      flash(field + '-' + str(message))
     db.session.rollback()
-    flash(f"An error occurred. Artist {request.form['name']} could not be updated")
-    return render_template('page/home.html')
-    
-  finally:
-    db.session.close()
-
-  return redirect(url_for('show_artist', artist_id=artist_id))
+    return render_template('forms/edit_artist.html', form=form, artist=artist)
 
 @app.route('/venues/<int:venue_id>/edit', methods=['GET'])
 def edit_venue(venue_id):
@@ -255,29 +242,19 @@ def edit_venue(venue_id):
 @app.route('/venues/<int:venue_id>/edit', methods=['POST'])
 def edit_venue_submission(venue_id):
 
+  form = VenueForm()
   venue = Venue.query.get(venue_id)
 
-  for var in request.form:
-    if var == 'genres':
-      setattr(venue, var, request.form.getlist(var))
-    elif var == 'seeking_talent':
-      setattr(venue, var, True if request.form.get(var) == 'y' else False)
-    else:
-      setattr(venue, var, request.form.get(var))
-    
-  try:
+  if form.validate_on_submit():
+    form.populate_obj(venue)
     db.session.commit()
     flash(f"Venue {request.form['name']} was successfully updated!")
-
-  except:
+    return redirect(url_for('show_venue', venue_id=venue_id))
+  else:
+    for field, message in form.errors.items():
+      flash(field + '-' + str(message))
     db.session.rollback()
-    flash(f"An error occurred. Venue {request.form['name']} could not be updated")
-    return render_template('page/home.html')
-    
-  finally:
-    db.session.close()
-
-  return redirect(url_for('show_venue', venue_id=venue_id))
+    return render_template('forms/edit_venue.html', form=form, venue=venue)
 
 #  Create Artist
 #  ----------------------------------------------------------------
@@ -293,20 +270,18 @@ def create_artist_submission():
 
   form = ArtistForm(request.form)
   
-  try:
+  if form.validate_on_submit():
     artist = Artist()
     form.populate_obj(artist)
     db.session.add(artist)
     db.session.commit()
     flash(f"Artist {request.form['name']} was successfully listed!")
-  except ValueError as e:
-    print(e)
-    flash(f"An error occurred. Artist {request.form['name']} could not be listed.")
+    return redirect(url_for('artists'))
+  else:
+    for field, message in form.errors.items():
+      flash(field + '-' + str(message))
     db.session.rollback()
-  finally:
-    db.session.close()
- 
-  return redirect(url_for('artists'))
+    return render_template('forms/new_artist.html', form=form)
 
 #  Shows
 #  ----------------------------------------------------------------
@@ -330,20 +305,19 @@ def create_shows():
 def create_show_submission():
   # called to create new shows in the db, upon submitting new show listing form
   form = ShowForm(request.form)
-  
-  try:
+
+  if form.validate_on_submit():
     show = Show()
     form.populate_obj(show)
     db.session.add(show)
     db.session.commit()
     flash(f"Show {request.form['name']} was successfully listed!")
-  except ValueError as e:
-    print(e)
-    flash(f"An error occurred. Show {request.form['name']} could not be listed.")
-    db.session.rollback()
-  finally:
-    db.session.close()
     return redirect(url_for('shows'))
+  else:
+    for field, message in form.errors.items():
+      flash(field + '-' + str(message))
+    db.session.rollback()
+    return render_template('forms/new_show.html', form=form)
     
 @app.errorhandler(400)
 def bad_request_error(error):
